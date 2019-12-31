@@ -8,6 +8,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.io.IOException;
+
 public class SplashActivity extends AppCompatActivity {
     int i = 1;
 
@@ -15,12 +17,20 @@ public class SplashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
+        final DatabaseHelper2 dataBaseHelper = new DatabaseHelper2(getApplicationContext());
+        try {
+            dataBaseHelper.createDataBase();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.i("123321", ""+e.getMessage());
+        }
 
         final Handler handler = new Handler();
         handler.postDelayed(() -> {
+
             //Do something after 100ms
 
-            startActivity(new Intent(this, MainActivity.class));
+            startActivity(new Intent(this, Main2Activity.class));
             //  autoUpdate();
 
         }, 1000);

@@ -1,17 +1,22 @@
 package com.quiz.translatoraalllanguage;
 
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -22,6 +27,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.Group;
 import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
@@ -52,14 +59,11 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
-import static java.security.AccessController.getContext;
-
 public class MainActivity extends AppCompatActivity implements OnCountryPickerListener {
     @BindView(R.id.textToTranslate)
     EditText textToTranslate;
     private final int REQ_CODE_SPEECH_INPUT = 100;
-    @BindView(R.id.textView2)
-    TextView textView2;
+
     @BindView(R.id.translatedText)
     TextView translatedText;
     @BindView(R.id.nav_view)
@@ -74,6 +78,10 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
     FloatingActionButton change;
     @BindView(R.id.bookmark)
     FloatingActionButton bookmark;
+    @BindView(R.id.group)
+    Group group;
+    @BindView(R.id.root)
+    ConstraintLayout rootView;
     private Spinner spinner1;
     private Spinner spinner2;
     private boolean isFavourite; // if current word is favourite.
@@ -92,11 +100,11 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         toolbar = findViewById(R.id.toolbar);
-        SharedPreferences preferences=getSharedPreferences("name",MODE_PRIVATE);
-        lan1code=preferences.getString("lan1code","en");
-        lan2code=preferences.getString("lan2code","bn");
-        lan1text=preferences.getString("lan1text","English");
-        lan2text=preferences.getString("lan2text","Bangla");
+        SharedPreferences preferences = getSharedPreferences("name", MODE_PRIVATE);
+        lan1code = preferences.getString("lan1code", "en");
+        lan2code = preferences.getString("lan2code", "bn");
+        lan1text = preferences.getString("lan1text", "English");
+        lan2text = preferences.getString("lan2text", "Bangla");
 
         MobileAds.initialize(this, new OnInitializationCompleteListener() {
             @Override
@@ -110,11 +118,12 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
         lang2.setText(lan2text);
         //textToTranslate = findViewById(R.id.textToTranslate);
         setSupportActionBar(toolbar);
+        translatedText.setMovementMethod(new ScrollingMovementMethod());
         translatedText = findViewById(R.id.translatedText);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         toggle.getDrawerArrowDrawable().setColor(getResources().getColor(R.color.white));
-       drawerLayout.addDrawerListener(toggle);
+        drawerLayout.addDrawerListener(toggle);
         toggle.syncState();
 
         setArgs();
@@ -136,32 +145,46 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
 
             lang1.setText(lan1text);
             lang2.setText(lan2text);
-           // translatedText.setText("Translating");
-            SharedPreferences.Editor editor=getSharedPreferences("name",MODE_PRIVATE).edit();
-            editor.putString("lan1text",lan1text);
-            editor.putString("lan1code",lan1code);
-            editor.putString("lan2text",lan2text);
-            editor.putString("lan2code",lan2code);
+            // translatedText.setText("Translating");
+            SharedPreferences.Editor editor = getSharedPreferences("name", MODE_PRIVATE).edit();
+            editor.putString("lan1text", lan1text);
+            editor.putString("lan1code", lan1code);
+            editor.putString("lan2text", lan2text);
+            editor.putString("lan2code", lan2code);
             editor.apply();
             translate(textToTranslate.getText().toString().trim());
         });
         navView.setNavigationItemSelectedListener(menuItem -> {
-            int id = menuItem.getItemId();
-            switch (id) {
-                case R.id.history:
-                    Intent intent=new Intent(getApplicationContext(),HistoryActivity.class);
-                    intent.putExtra("name","History.db");
-                    startActivity(intent);
-                    drawerLayout.closeDrawers();
-                    break;
-                case R.id.bookmark:
-                    Intent intent2=new Intent(getApplicationContext(),HistoryActivity.class);
-                    intent2.putExtra("name","Favourites.db");
-                    startActivity(intent2);
-                    drawerLayout.closeDrawers();
-            }
-            return false;}
+                    int id = menuItem.getItemId();
+                    switch (id) {
+                        case R.id.history:
+                            Intent intent = new Intent(getApplicationContext(), HistoryActivity.class);
+                            intent.putExtra("name", "History.db");
+                            startActivity(intent);
+                            drawerLayout.closeDrawers();
+                            break;
+                        case R.id.bookmark:
+                            Intent intent2 = new Intent(getApplicationContext(), HistoryActivity.class);
+                            intent2.putExtra("name", "Favourites.db");
+                            startActivity(intent2);
+                            drawerLayout.closeDrawers();
+                    }
+                    return false;
+                }
         );
+        rootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                int heightDiff = rootView.getRootView().getHeight() - rootView.getHeight();
+
+                if (heightDiff > 500) {
+                  group.setVisibility(View.GONE);
+                } else {
+                    Log.e("123321", "keyboard closed");
+                    group.setVisibility(View.VISIBLE);
+                }
+            }
+        });
     }
 
     @Override
@@ -265,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
                         public void run() {
                             Log.i("123321", "210");
                             translatedText.setText(response.body().getText().get(0));
-                               checkIfInFavourites();
+                            checkIfInFavourites();
                             addToHistory();
                         }
                     });
@@ -281,6 +304,8 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
 
 
     private void showPicker() {
+        InputMethodManager inputManager = (InputMethodManager) getApplicationContext().getSystemService(getApplicationContext().INPUT_METHOD_SERVICE);
+        inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
         CountryPicker.Builder builder =
                 new CountryPicker.Builder().with(MainActivity.this)
                         .listener(this);
@@ -305,17 +330,17 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
             lan1text = country.getName();
             lang1.setText(country.getName());
             lan1code = country.getCode();
-            SharedPreferences.Editor editor=getSharedPreferences("name",MODE_PRIVATE).edit();
-            editor.putString("lan1text",lan1text);
-            editor.putString("lan1code",lan1code);
+            SharedPreferences.Editor editor = getSharedPreferences("name", MODE_PRIVATE).edit();
+            editor.putString("lan1text", lan1text);
+            editor.putString("lan1code", lan1code);
             editor.apply();
         } else {
             lan2text = country.getName();
             lang2.setText(country.getName());
             lan2code = country.getCode();
-            SharedPreferences.Editor editor=getSharedPreferences("name",MODE_PRIVATE).edit();
-            editor.putString("lan2text",lan2text);
-            editor.putString("lan2code",lan2code);
+            SharedPreferences.Editor editor = getSharedPreferences("name", MODE_PRIVATE).edit();
+            editor.putString("lan2text", lan2text);
+            editor.putString("lan2code", lan2code);
             editor.apply();
         }
 
@@ -340,10 +365,16 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
 
     @OnClick(R.id.translate)
     public void onViewClicked() {
-    //    translatedText.setText("Translating");
+        //    translatedText.setText("Translating");
         InputMethodManager inputManager = (InputMethodManager) getApplicationContext().getSystemService(getApplicationContext().INPUT_METHOD_SERVICE);
-        inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+
         translate(textToTranslate.getText().toString().trim());
+        try{
+        inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);}
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     @OnClick(R.id.voice)
@@ -476,19 +507,18 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
 
     @OnClick(R.id.share)
     public void onShareClicked() {
-        Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+        Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
-        intent.putExtra(android.content.Intent.EXTRA_TEXT, translatedText.getText().toString());
-        intent.putExtra(android.content.Intent.EXTRA_SUBJECT,"Title goes here");
+        intent.putExtra(Intent.EXTRA_TEXT, translatedText.getText().toString());
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Title goes here");
         startActivity(Intent.createChooser(intent, "Share"));
     }
 
     @OnClick(R.id.bookmark)
     public void onBookmarkClicked() {
-        if(textToTranslate.getText().toString().trim().equals(""))
+        if (textToTranslate.getText().toString().trim().equals(""))
             Toast.makeText(this, "Please Write Something", Toast.LENGTH_SHORT).show();
-        else
-        {
+        else {
             DataBaseHelper dataBaseHelper = new DataBaseHelper(getApplicationContext(),
                     "Favourites.db");
             String text = textToTranslate.getText().toString().trim();
@@ -503,10 +533,25 @@ public class MainActivity extends AppCompatActivity implements OnCountryPickerLi
             } else {
                 isFavourite = true;
                 dataBaseHelper.insertWord(item);
-              bookmark.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.like2));
+                bookmark.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.like2));
             }
             dataBaseHelper.close();
         }
 
     }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+
+
+        // Checks whether a hardware keyboard is available
+        if (newConfig.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO) {
+            group.setVisibility(View.VISIBLE);
+        } else if (newConfig.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_YES) {
+            group.setVisibility(View.GONE);
+        }
+    }
+
+
 }

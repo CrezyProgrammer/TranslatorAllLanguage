@@ -21,7 +21,9 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <include
-        layout="@layout/content_main"
+        layout="@layout/layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_marginTop="?attr/actionBarSize" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
