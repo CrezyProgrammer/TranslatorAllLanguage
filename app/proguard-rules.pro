@@ -19,3 +19,16 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keepclassmembers class * {
+ @com.google.api.client.util.Key <fields>;
+}
+-keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
+
+
+-dontwarn org.joda.convert.**
+-dontwarn com.google.**
+-dontwarn com.google.auto.**
+-dontwarn autovalue.shaded.com.**
+-dontwarn sun.misc.Unsafe
+-dontwarn javax.lang.model.element.Modifier

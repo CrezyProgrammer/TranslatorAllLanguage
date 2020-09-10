@@ -1,2 +1,3 @@
+include ':library'
 include ':app', ':countrypicker'
 rootProject.name='Translator All Language'
